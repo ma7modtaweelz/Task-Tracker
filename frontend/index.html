@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Task Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Task Tracker</h1>
+        <p>Kanban board with due dates and tags</p>
+      </div>
+      <button id="new-task-button" type="button">New Task</button>
+    </header>
+
+    <main>
+      <section class="filters" aria-label="Task filters">
+        <label>
+          Tag
+          <input id="tag-filter" type="search" placeholder="frontend">
+        </label>
+        <label class="checkbox">
+          <input id="overdue-filter" type="checkbox">
+          Overdue only
+        </label>
+        <button id="clear-filters" type="button">Clear</button>
+      </section>
+
+      <section class="board" aria-label="Kanban board">
+        <article class="column" data-status="todo">
+          <h2>To Do</h2>
+          <div class="task-list" id="todo-list"></div>
+        </article>
+        <article class="column" data-status="in_progress">
+          <h2>In Progress</h2>
+          <div class="task-list" id="in_progress-list"></div>
+        </article>
+        <article class="column" data-status="done">
+          <h2>Done</h2>
+          <div class="task-list" id="done-list"></div>
+        </article>
+      </section>
+    </main>
+
+    <dialog id="task-dialog">
+      <form id="task-form" method="dialog">
+        <input id="task-id" type="hidden">
+        <h2 id="dialog-title">New Task</h2>
+        <label>
+          Title
+          <input id="title" required maxlength="100">
+        </label>
+        <label>
+          Description
+          <textarea id="description" rows="3"></textarea>
+        </label>
+        <div class="field-row">
+          <label>
+            Status
+            <select id="status">
+              <option value="todo">To Do</option>
+              <option value="in_progress">In Progress</option>
+              <option value="done">Done</option>
+            </select>
+          </label>
+          <label>
+            Priority
+            <select id="priority">
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </label>
+        </div>
+        <div class="field-row">
+          <label>
+            Assignee
+            <input id="assignee">
+          </label>
+          <label>
+            Due Date
+            <input id="due-date" type="date">
+          </label>
+        </div>
+        <label>
+          Tags
+          <input id="tags" placeholder="frontend, course">
+        </label>
+        <p class="error" id="form-error"></p>
+        <menu>
+          <button id="delete-task" type="button" class="danger">Delete</button>
+          <span></span>
+          <button id="cancel-dialog" type="button">Cancel</button>
+          <button type="submit">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script src="app.js"></script>
+  </body>
+</html>
