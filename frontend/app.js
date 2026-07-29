@@ -148,11 +148,11 @@ function formPayload() {
     .filter(Boolean);
 
   return {
-    title: document.querySelector("#title").value,
-    description: document.querySelector("#description").value,
+    title: document.querySelector("#title").value.trim(),
+    description: document.querySelector("#description").value.trim(),
     status: document.querySelector("#status").value,
     priority: document.querySelector("#priority").value,
-    assignee: document.querySelector("#assignee").value,
+    assignee: document.querySelector("#assignee").value.trim(),
     due_date: document.querySelector("#due-date").value || null,
     tags,
   };

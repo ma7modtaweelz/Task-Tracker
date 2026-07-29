@@ -15,11 +15,12 @@ Command run:
 Result:
 
 ```text
-8 passed in 0.02s
+9 passed in 0.01s
 ```
 
 Coverage:
 - Create task with due date and tags.
+- Accept the full frontend create-form payload with title, description, status, priority, assignee, blank due date, and blank tags.
 - Reject invalid due date format.
 - Compute overdue status.
 - Filter overdue tasks.
@@ -41,6 +42,8 @@ Local API check:
 
 - `POST /tasks` created a task with `due_date: "2026-08-01"` and `tags: ["frontend"]`.
 - `GET /tasks?tag=frontend` returned that task.
+- `POST /tasks` with the full frontend form payload returned `HTTP/1.0 201 Created`.
+- The response preserved `"title": "Frontend create confirmation"`, `"description": "Title description status priority assignee payload"`, `"status": "todo"`, `"priority": "high"`, `"assignee": "Mahmoud"`, `"due_date": null`, `"tags": []`, and `"is_overdue": false`.
 
 Then open `frontend/index.html` and complete these browser checks:
 
@@ -69,11 +72,43 @@ After refactor:
 ## Break Test Evidence
 
 Break Test 1:
-- Temporarily change overdue logic so `done` tasks with past due dates count as overdue.
-- Expected result: `test_overdue_filter_returns_only_open_past_due_tasks` fails because the done task appears in the overdue result.
-- Fix: restore the `status != "done"` condition.
+- Temporarily removed `and result.get("status") != "done"` from overdue computation.
+- Command: `.venv/bin/python -m pytest tests/test_store.py::test_overdue_filter_returns_only_open_past_due_tasks -q`
+- Failing result:
+
+```text
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________ test_overdue_filter_returns_only_open_past_due_tasks _____________
+>       assert [task["id"] for task in results] == [late["id"]]
+E       AssertionError: assert ['8f8ec715-54...6b1368d8af15'] == ['e674ac35-61...6b1368d8af15']
+E         Left contains one more item: 'e674ac35-61a7-4e74-8782-6b1368d8af15'
+FAILED tests/test_store.py::test_overdue_filter_returns_only_open_past_due_tasks
+1 failed in 0.02s
+```
+
+- Restored `and result.get("status") != "done"`.
 
 Break Test 2:
-- Temporarily remove blank-tag rejection from `normalize_tags`.
-- Expected result: `test_blank_tag_is_rejected` fails because no `ValidationError` is raised.
-- Fix: restore the blank tag validation branch.
+- Temporarily changed blank tag handling from raising `ValidationError` to `continue`.
+- Command: `.venv/bin/python -m pytest tests/test_store.py::test_blank_tag_is_rejected -q`
+- Failing result:
+
+```text
+F                                                                        [100%]
+=================================== FAILURES ===================================
+__________________________ test_blank_tag_is_rejected __________________________
+>       with pytest.raises(ValidationError) as exc:
+E       Failed: DID NOT RAISE ValidationError
+FAILED tests/test_store.py::test_blank_tag_is_rejected - Failed: DID NOT RAIS...
+1 failed in 0.01s
+```
+
+- Restored the blank tag `ValidationError`.
+
+Final restore check:
+
+```text
+.........                                                                [100%]
+9 passed in 0.01s
+```

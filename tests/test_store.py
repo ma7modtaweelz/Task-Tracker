@@ -21,6 +21,30 @@ def test_create_task_with_due_date_and_tags():
     assert task["is_overdue"] is False
 
 
+def test_create_task_accepts_full_frontend_form_payload():
+    store = TaskStore()
+
+    task = store.create_task(
+        {
+            "title": "Frontend create check",
+            "description": "Created from the task dialog",
+            "status": "todo",
+            "priority": "high",
+            "assignee": "Mahmoud",
+            "due_date": None,
+            "tags": [],
+        }
+    )
+
+    assert task["title"] == "Frontend create check"
+    assert task["description"] == "Created from the task dialog"
+    assert task["status"] == "todo"
+    assert task["priority"] == "high"
+    assert task["assignee"] == "Mahmoud"
+    assert task["due_date"] is None
+    assert task["tags"] == []
+
+
 def test_invalid_due_date_is_rejected():
     store = TaskStore()
 
