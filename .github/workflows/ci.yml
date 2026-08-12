@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install test dependencies
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Run pytest
+        run: python -m pytest
+
+  docker-health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t task-tracker-final .
+
+      - name: Run Docker container
+        run: docker run -d --name task-tracker-final -p 8000:8000 task-tracker-final
+
+      - name: Verify health endpoint
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if curl -fsS http://127.0.0.1:8000/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs task-tracker-final
+          exit 1
+
+      - name: Stop Docker container
+        if: always()
+        run: docker stop task-tracker-final

@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import json
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 from .store import ValidationError, store
 
 
-HOST = "127.0.0.1"
-PORT = 8000
+HOST = os.environ.get("HOST", "127.0.0.1")
+PORT = int(os.environ.get("PORT", "8000"))
 
 
 class TaskTrackerHandler(BaseHTTPRequestHandler):
@@ -17,6 +18,10 @@ class TaskTrackerHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         path, query = self._path_and_query()
+        if path == "/health":
+            self._send_json(200, {"status": "ok"})
+            return
+
         if path == "/tasks":
             self._handle_errors(lambda: self._send_json(200, store.list_tasks(query)))
             return
