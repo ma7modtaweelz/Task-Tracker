@@ -13,7 +13,7 @@
 ## CI Evidence
 
 - Workflow file: `.github/workflows/ci.yml`
-- Latest run link or note: pending after push to GitHub
+- Latest run link or note: GitHub Actions run 1 completed successfully: `https://github.com/ma7modtaweelz/Task-Tracker/actions/runs/31642500316`
 - Test command used by CI: `python -m pytest`
 - Docker command used by CI: `docker build -t task-tracker-final .`, `docker run -d --name task-tracker-final -p 8000:8000 task-tracker-final`, then `curl -fsS http://127.0.0.1:8000/health`
 - Shortcut check: no `continue-on-error`, no `|| true`, pytest is not skipped, Python version is pinned to `3.13`, and dependencies are installed from `requirements-dev.txt`.
