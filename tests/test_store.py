@@ -7,16 +7,17 @@ from task_tracker.store import TaskStore, ValidationError, normalize_tags
 
 def test_create_task_with_due_date_and_tags():
     store = TaskStore()
+    future_date = (date.today() + timedelta(days=7)).isoformat()
     task = store.create_task(
         {
             "title": "Submit project",
-            "due_date": "2026-08-01",
+            "due_date": future_date,
             "tags": ["Course", "AI"],
         }
     )
 
     assert task["title"] == "Submit project"
-    assert task["due_date"] == "2026-08-01"
+    assert task["due_date"] == future_date
     assert task["tags"] == ["Course", "AI"]
     assert task["is_overdue"] is False
 

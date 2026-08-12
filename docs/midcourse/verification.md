@@ -15,7 +15,7 @@ Command run:
 Result:
 
 ```text
-9 passed in 0.01s
+9 passed in 0.02s
 ```
 
 Coverage:
@@ -44,6 +44,7 @@ Local API check:
 - `GET /tasks?tag=frontend` returned that task.
 - `POST /tasks` with the full frontend form payload returned `HTTP/1.0 201 Created`.
 - The response preserved `"title": "Frontend create confirmation"`, `"description": "Title description status priority assignee payload"`, `"status": "todo"`, `"priority": "high"`, `"assignee": "Mahmoud"`, `"due_date": null`, `"tags": []`, and `"is_overdue": false`.
+- Feedback re-check on 2026-08-13: `POST /tasks` with the full frontend form payload returned a created task with `"title": "Create feedback check"`, `"status": "todo"`, `"priority": "high"`, `"due_date": null`, `"tags": []`, and `"is_overdue": false`.
 
 Then open `frontend/index.html` and complete these browser checks:
 
@@ -110,5 +111,19 @@ Final restore check:
 
 ```text
 .........                                                                [100%]
-9 passed in 0.01s
+9 passed in 0.02s
 ```
+
+## Feedback Response Check
+
+Facilitator feedback said:
+
+- Creating a new task does not work.
+- No break test evidence.
+
+Response:
+
+- Added/kept `test_create_task_accepts_full_frontend_form_payload` to cover the exact fields sent by the frontend create dialog.
+- Verified `POST /tasks` manually against the running backend and received a created task response.
+- Kept two break-test evidence entries above, including the temporary code change, the failing pytest command, the failure output, and the restore check.
+- Updated the due-date test to use a future date relative to `date.today()` so the test does not fail later because a hardcoded date becomes overdue.
