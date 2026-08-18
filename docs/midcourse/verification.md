@@ -15,12 +15,13 @@ Command run:
 Result:
 
 ```text
-9 passed in 0.02s
+10 passed in 0.04s
 ```
 
 Coverage:
 - Create task with due date and tags.
 - Accept the full frontend create-form payload with title, description, status, priority, assignee, blank due date, and blank tags.
+- Create a task through the `POST /tasks` route handler.
 - Reject invalid due date format.
 - Compute overdue status.
 - Filter overdue tasks.
@@ -40,11 +41,11 @@ The backend was started with:
 
 Local API check:
 
-- `POST /tasks` created a task with `due_date: "2026-08-01"` and `tags: ["frontend"]`.
-- `GET /tasks?tag=frontend` returned that task.
 - `POST /tasks` with the full frontend form payload returned `HTTP/1.0 201 Created`.
 - The response preserved `"title": "Frontend create confirmation"`, `"description": "Title description status priority assignee payload"`, `"status": "todo"`, `"priority": "high"`, `"assignee": "Mahmoud"`, `"due_date": null`, `"tags": []`, and `"is_overdue": false`.
 - Feedback re-check on 2026-08-13: `POST /tasks` with the full frontend form payload returned a created task with `"title": "Create feedback check"`, `"status": "todo"`, `"priority": "high"`, `"due_date": null`, `"tags": []`, and `"is_overdue": false`.
+- Feedback re-check on 2026-08-18: `POST /tasks` returned `HTTP/1.0 201 Created` for `"title": "Mid project create proof"`, `"description": "Created during mid-course feedback revision"`, `"status": "todo"`, `"priority": "high"`, `"assignee": "Mahmoud"`, `"due_date": null`, `"tags": ["frontend"]`, and `"is_overdue": false`.
+- `GET /tasks?tag=frontend` returned `HTTP/1.0 200 OK` and included the `"Mid project create proof"` task.
 
 Then open `frontend/index.html` and complete these browser checks:
 
@@ -114,6 +115,14 @@ Final restore check:
 9 passed in 0.02s
 ```
 
+Additional feedback restore check after adding the route-handler regression test:
+
+```text
+tests/test_server.py .                                                   [ 10%]
+tests/test_store.py .........                                            [100%]
+10 passed in 0.04s
+```
+
 ## Feedback Response Check
 
 Facilitator feedback said:
@@ -124,6 +133,7 @@ Facilitator feedback said:
 Response:
 
 - Added/kept `test_create_task_accepts_full_frontend_form_payload` to cover the exact fields sent by the frontend create dialog.
+- Added `test_post_tasks_creates_task_through_route_handler` to cover the `POST /tasks` route path directly.
 - Verified `POST /tasks` manually against the running backend and received a created task response.
 - Kept two break-test evidence entries above, including the temporary code change, the failing pytest command, the failure output, and the restore check.
 - Updated the due-date test to use a future date relative to `date.today()` so the test does not fail later because a hardcoded date becomes overdue.
