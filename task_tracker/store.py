@@ -94,7 +94,8 @@ class TaskStore:
         data: dict[str, Any] = {}
 
         if not partial or "title" in payload:
-            title = str(payload.get("title", "")).strip()
+            raw_title = payload.get("title", "")
+            title = "" if raw_title is None else str(raw_title).strip()
             if not title:
                 errors["title"] = "Title is required."
             else:

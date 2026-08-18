@@ -1,6 +1,6 @@
 # Task Tracker
 
-A small Kanban-style task tracker with a Python standard-library API and a static frontend.
+A small Kanban-style task tracker with a FastAPI backend and a static frontend.
 
 ## Features
 
@@ -29,7 +29,7 @@ python3 -m pytest
 If pytest is not installed:
 
 ```bash
-python3 -m pip install pytest
+python3 -m pip install -r requirements-dev.txt
 ```
 
 ## API Summary

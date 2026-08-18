@@ -15,13 +15,15 @@ Command run:
 Result:
 
 ```text
-10 passed in 0.04s
+12 passed
 ```
 
 Coverage:
 - Create task with due date and tags.
 - Accept the full frontend create-form payload with title, description, status, priority, assignee, blank due date, and blank tags.
-- Create a task through the `POST /tasks` route handler.
+- Create a task through HTTP `POST /tasks` and assert `201`.
+- Send an invalid HTTP `POST /tasks` payload and assert `422`.
+- Request a missing task through HTTP `GET /tasks/{id}` and assert `404`.
 - Reject invalid due date format.
 - Compute overdue status.
 - Filter overdue tasks.
@@ -46,6 +48,10 @@ Local API check:
 - Feedback re-check on 2026-08-13: `POST /tasks` with the full frontend form payload returned a created task with `"title": "Create feedback check"`, `"status": "todo"`, `"priority": "high"`, `"due_date": null`, `"tags": []`, and `"is_overdue": false`.
 - Feedback re-check on 2026-08-18: `POST /tasks` returned `HTTP/1.0 201 Created` for `"title": "Mid project create proof"`, `"description": "Created during mid-course feedback revision"`, `"status": "todo"`, `"priority": "high"`, `"assignee": "Mahmoud"`, `"due_date": null`, `"tags": ["frontend"]`, and `"is_overdue": false`.
 - `GET /tasks?tag=frontend` returned `HTTP/1.0 200 OK` and included the `"Mid project create proof"` task.
+- Browser-path re-check on 2026-08-18: CORS preflight `OPTIONS /tasks` with `Origin: null`, `Access-Control-Request-Method: POST`, and `Access-Control-Request-Headers: content-type` returned `HTTP/1.1 200 OK` with `access-control-allow-origin: *`.
+- Browser-style `POST /tasks` with `Origin: null` returned `HTTP/1.1 201 Created`, `access-control-allow-origin: *`, and stored `"title": "Final browser proof"`.
+- Invalid browser-style `POST /tasks` with a missing/blank title returned `HTTP/1.1 422 Unprocessable Content` and `{"errors":{"title":"Title is required."}}`.
+- Missing task request `GET /tasks/not-found` returned `HTTP/1.1 404 Not Found` and `{"detail":"Task not found."}`.
 
 Then open `frontend/index.html` and complete these browser checks:
 
@@ -115,12 +121,12 @@ Final restore check:
 9 passed in 0.02s
 ```
 
-Additional feedback restore check after adding the route-handler regression test:
+Additional feedback restore check after restoring FastAPI and adding HTTP-level tests:
 
 ```text
-tests/test_server.py .                                                   [ 10%]
+tests/test_server.py ...                                                 [ 25%]
 tests/test_store.py .........                                            [100%]
-10 passed in 0.04s
+12 passed
 ```
 
 ## Feedback Response Check
@@ -133,7 +139,10 @@ Facilitator feedback said:
 Response:
 
 - Added/kept `test_create_task_accepts_full_frontend_form_payload` to cover the exact fields sent by the frontend create dialog.
-- Added `test_post_tasks_creates_task_through_route_handler` to cover the `POST /tasks` route path directly.
-- Verified `POST /tasks` manually against the running backend and received a created task response.
+- Replaced the route-handler harness with real FastAPI `TestClient` HTTP tests:
+  - `test_post_tasks_creates_task_over_http` asserts `201`.
+  - `test_post_tasks_invalid_payload_returns_422` asserts `422`.
+  - `test_get_missing_task_returns_404_over_http` asserts `404`.
+- Verified `POST /tasks` manually against the running FastAPI backend with browser-style CORS headers and received a created task response.
 - Kept two break-test evidence entries above, including the temporary code change, the failing pytest command, the failure output, and the restore check.
 - Updated the due-date test to use a future date relative to `date.today()` so the test does not fail later because a hardcoded date becomes overdue.

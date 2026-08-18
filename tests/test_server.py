@@ -1,46 +1,55 @@
-from task_tracker.server import TaskTrackerHandler
+from fastapi.testclient import TestClient
+
+from task_tracker.server import app
 from task_tracker.store import store
 
 
-class HandlerHarness(TaskTrackerHandler):
-    def __init__(self, path, payload):
-        self.path = path
-        self.payload = payload
-        self.sent_status = None
-        self.sent_payload = None
-
-    def _read_json(self):
-        return self.payload
-
-    def _send_json(self, status, payload):
-        self.sent_status = status
-        self.sent_payload = payload
-
-
-def test_post_tasks_creates_task_through_route_handler():
+def test_post_tasks_creates_task_over_http():
     store.tasks.clear()
-    payload = {
-        "title": "HTTP create check",
-        "description": "Created through POST /tasks",
-        "status": "todo",
-        "priority": "high",
-        "assignee": "Mahmoud",
-        "due_date": None,
-        "tags": [],
-    }
-    handler = HandlerHarness("/tasks", payload)
+    client = TestClient(app)
 
-    try:
-        handler.do_POST()
+    response = client.post(
+        "/tasks",
+        json={
+            "title": "HTTP create check",
+            "description": "Created through POST /tasks",
+            "status": "todo",
+            "priority": "high",
+            "assignee": "Mahmoud",
+            "due_date": None,
+            "tags": [],
+        },
+    )
 
-        assert handler.sent_status == 201
-        assert handler.sent_payload["title"] == "HTTP create check"
-        assert handler.sent_payload["description"] == "Created through POST /tasks"
-        assert handler.sent_payload["status"] == "todo"
-        assert handler.sent_payload["priority"] == "high"
-        assert handler.sent_payload["assignee"] == "Mahmoud"
-        assert handler.sent_payload["due_date"] is None
-        assert handler.sent_payload["tags"] == []
-        assert handler.sent_payload["is_overdue"] is False
-    finally:
-        store.tasks.clear()
+    body = response.json()
+    assert response.status_code == 201
+    assert body["title"] == "HTTP create check"
+    assert body["description"] == "Created through POST /tasks"
+    assert body["status"] == "todo"
+    assert body["priority"] == "high"
+    assert body["assignee"] == "Mahmoud"
+    assert body["due_date"] is None
+    assert body["tags"] == []
+    assert body["is_overdue"] is False
+
+    store.tasks.clear()
+
+
+def test_post_tasks_invalid_payload_returns_422():
+    store.tasks.clear()
+    client = TestClient(app)
+
+    response = client.post("/tasks", json={})
+
+    assert response.status_code == 422
+    assert response.json() == {"errors": {"title": "Title is required."}}
+    store.tasks.clear()
+
+
+def test_get_missing_task_returns_404_over_http():
+    client = TestClient(app)
+
+    response = client.get("/tasks/not-found")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Task not found."}

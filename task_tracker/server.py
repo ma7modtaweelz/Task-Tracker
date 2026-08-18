@@ -1,8 +1,12 @@
 from __future__ import annotations
 
-import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from typing import Any
+
+import uvicorn
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, ConfigDict, Field
 
 from .store import ValidationError, store
 
@@ -10,113 +14,93 @@ from .store import ValidationError, store
 HOST = "127.0.0.1"
 PORT = 8000
 
+app = FastAPI(title="Task Tracker API")
 
-class TaskTrackerHandler(BaseHTTPRequestHandler):
-    def do_OPTIONS(self) -> None:
-        self._send_json(204, None)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type"],
+)
 
-    def do_GET(self) -> None:
-        path, query = self._path_and_query()
-        if path == "/tasks":
-            self._handle_errors(lambda: self._send_json(200, store.list_tasks(query)))
-            return
 
-        task_id = self._task_id(path)
-        if task_id:
-            task = store.get_task(task_id)
-            if task is None:
-                self._send_json(404, {"error": "Task not found."})
-            else:
-                self._send_json(200, task)
-            return
+class TaskPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-        self._send_json(404, {"error": "Route not found."})
+    title: str | None = Field(default=None, max_length=100)
+    description: str | None = None
+    status: str | None = None
+    priority: str | None = None
+    assignee: str | None = None
+    due_date: str | None = None
+    tags: list[str] | str | None = None
 
-    def do_POST(self) -> None:
-        path, _query = self._path_and_query()
-        if path != "/tasks":
-            self._send_json(404, {"error": "Route not found."})
-            return
-        self._handle_errors(lambda: self._send_json(201, store.create_task(self._read_json())))
-
-    def do_PATCH(self) -> None:
-        path, _query = self._path_and_query()
-        task_id = self._task_id(path)
-        if not task_id:
-            self._send_json(404, {"error": "Route not found."})
-            return
-
-        def update() -> None:
-            task = store.update_task(task_id, self._read_json())
-            if task is None:
-                self._send_json(404, {"error": "Task not found."})
-            else:
-                self._send_json(200, task)
-
-        self._handle_errors(update)
-
-    def do_DELETE(self) -> None:
-        path, _query = self._path_and_query()
-        task_id = self._task_id(path)
-        if not task_id:
-            self._send_json(404, {"error": "Route not found."})
-            return
-        if store.delete_task(task_id):
-            self._send_json(204, None)
-        else:
-            self._send_json(404, {"error": "Task not found."})
-
-    def _handle_errors(self, action) -> None:
-        try:
-            action()
-        except ValidationError as exc:
-            self._send_json(422, {"errors": exc.errors})
-        except json.JSONDecodeError:
-            self._send_json(400, {"error": "Invalid JSON body."})
-
-    def _path_and_query(self) -> tuple[str, dict[str, str]]:
-        parsed = urlparse(self.path)
-        query = {key: values[-1] for key, values in parse_qs(parsed.query).items()}
-        return parsed.path.rstrip("/") or "/", query
-
-    def _task_id(self, path: str) -> str | None:
-        parts = path.strip("/").split("/")
-        if len(parts) == 2 and parts[0] == "tasks" and parts[1]:
-            return parts[1]
-        return None
-
-    def _read_json(self) -> dict:
-        length = int(self.headers.get("Content-Length", "0"))
-        if length == 0:
-            return {}
-        body = self.rfile.read(length).decode("utf-8")
-        data = json.loads(body)
-        if not isinstance(data, dict):
-            raise ValidationError({"body": "JSON body must be an object."})
+    def to_store_payload(self, partial: bool) -> dict[str, Any]:
+        data = self.model_dump(exclude_none=True)
+        if not partial:
+            data["title"] = self.title
+            data["due_date"] = self.due_date
+            data["tags"] = self.tags
         return data
 
-    def _send_json(self, status: int, payload) -> None:
-        self.send_response(status)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        if payload is None:
-            self.end_headers()
-            return
-        encoded = json.dumps(payload).encode("utf-8")
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(encoded)))
-        self.end_headers()
-        self.wfile.write(encoded)
 
-    def log_message(self, format: str, *args) -> None:
-        return
+@app.exception_handler(ValidationError)
+async def validation_error_handler(_request: Request, exc: ValidationError) -> JSONResponse:
+    return JSONResponse(status_code=422, content={"errors": exc.errors})
+
+
+@app.get("/tasks")
+def list_tasks(
+    status: str | None = None,
+    priority: str | None = None,
+    overdue: str | None = None,
+    tag: str | None = None,
+) -> list[dict[str, Any]]:
+    filters = {
+        key: value
+        for key, value in {
+            "status": status,
+            "priority": priority,
+            "overdue": overdue,
+            "tag": tag,
+        }.items()
+        if value is not None
+    }
+    return store.list_tasks(filters)
+
+
+@app.post("/tasks", status_code=201)
+def create_task(payload: TaskPayload) -> dict[str, Any]:
+    return store.create_task(payload.to_store_payload(partial=False))
+
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: str) -> dict[str, Any]:
+    task = store.get_task(task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    return task
+
+
+@app.patch("/tasks/{task_id}")
+def update_task(task_id: str, payload: TaskPayload) -> dict[str, Any]:
+    task = store.update_task(task_id, payload.to_store_payload(partial=True))
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found.")
+    return task
+
+
+@app.delete("/tasks/{task_id}", status_code=204)
+def delete_task(task_id: str) -> Response:
+    if not store.delete_task(task_id):
+        raise HTTPException(status_code=404, detail="Task not found.")
+    return Response(status_code=204)
 
 
 def run() -> None:
-    server = ThreadingHTTPServer((HOST, PORT), TaskTrackerHandler)
     print(f"Task Tracker API running at http://{HOST}:{PORT}")
-    server.serve_forever()
+    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
 
 
 if __name__ == "__main__":
